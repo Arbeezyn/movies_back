@@ -9,6 +9,8 @@ import movieSchema from "./models/Movie";
 const app = express();
 const port = 3000;
 app.use(express.json());
+app.use(cors());
+app.use(express.static("uploads"));
 
 // Подключение к базе данных
 mongoose
@@ -79,7 +81,6 @@ app.post(
 
 app.get("/movie/video", (req: Request, res: Response) => {
   const filePath = path.join(__dirname, req.body.video);
-
   res.sendFile(filePath);
 });
 
