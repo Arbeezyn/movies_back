@@ -90,9 +90,12 @@ app.get("/movie/poster", (req: Request, res: Response) => {
   res.sendFile(filePath);
 });
 
-app.get("/movie/all", async (req: Request, res: Response) => {
+app.get("/movie/all", async (req, res) => {
   try {
-    const data = await movieSchema.find();
+    const sortOrder = req.query.sort || "asc"; // Получаем параметр сортировки из запроса или устанавливаем по умолчанию "asc"
+    const data = await movieSchema
+      .find()
+      .sort({ age: sortOrder === "asc" ? 1 : -1 }); // Сортируем результаты по году в соответствии с выбранным порядком сортировки
     res.json(data);
   } catch (error) {
     console.error("Ошибка при получении данных:", error);
@@ -116,6 +119,26 @@ app.get("/movie/:id", async (req: Request, res: Response) => {
     res.json(data);
   } catch (error) {
     console.error("Ошибка при получении данных:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+//Алгоритм поиска
+app.get("/search", async (req, res) => {
+  try {
+    const query = req.query.query; // Получаем строку запроса из параметра запроса
+    const sortOrder = req.query.sort || "asc"; // Получаем параметр сортировки из запроса или устанавливаем по умолчанию "asc"
+
+    // Используем регулярное выражение для поиска фильмов, у которых название содержит указанную строку
+    const data = await movieSchema
+      .find({
+        title: { $regex: query, $options: "i" },
+      })
+      .sort({ age: sortOrder === "asc" ? 1 : -1 }); // Сортируем результаты по году в соответствии с выбранным порядком сортировки
+
+    res.json(data);
+  } catch (error) {
+    console.error("Ошибка при поиске данных:", error);
     res.status(500).send("Internal Server Error");
   }
 });
