@@ -3,8 +3,10 @@ import multer from "multer";
 import path from "path";
 import cors from "cors";
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 
 import movieSchema from "./models/Movie";
+import User from "./models/User";
 
 const app = express();
 const port = 3000;
@@ -139,6 +141,54 @@ app.get("/search", async (req, res) => {
     res.json(data);
   } catch (error) {
     console.error("Ошибка при поиске данных:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// Регистрация пользователя
+app.post("/register", async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).send("Пользователь с таким именем уже существует");
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = new User({ username, password: hashedPassword });
+    await newUser.save();
+    res.status(201).send("Пользователь зарегистрирован успешно");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Произошла ошибка при регистрации пользователя");
+  }
+});
+
+// Аутентификация пользователя
+app.post("/login", async (req: Request, res: Response) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(404).send("Пользователь не найден");
+    }
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).send("Неверный пароль");
+    }
+    // Если аутентификация прошла успешно, отправляем данные пользователя
+    res.status(200).json({ id: user._id, username: user.username });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Произошла ошибка при попытке входа");
+  }
+});
+
+app.delete("/movie/:id", async (req: Request, res: Response) => {
+  try {
+    const data = await movieSchema.findByIdAndDelete(req.params.id);
+    res.json(data);
+  } catch (error) {
+    console.error("Ошибка при удалении данных:", error);
     res.status(500).send("Internal Server Error");
   }
 });
